@@ -1,8 +1,20 @@
-# Bike Sharing Dataset Analysis
+## Setup Environment - Anaconda
+```sh
+conda create --name main-ds python=3.9
+conda activate main-ds
+pip install -r requirements.txt
+```
 
-## How to Run the Dashboard
+## Setup Environment - Shell/Terminal
+```sh
+mkdir proyek_analisis_data
+cd proyek_analisis_data
+pipenv install
+pipenv shell
+pip install -r requirements.txt
+```
 
-1. Clone this repository.
-2. Install the required libraries by running:
-3. Run the Streamlit dashboard by executing:
-4. Open the provided URL in your web browser to view the dashboard.
+## Run Streamlit App
+```sh
+streamlit run dashboard.py
+```
