@@ -1,4 +1,4 @@
 streamlit
-pandas
-seaborn
 matplotlib>=3.5.0
+pandas
+seaborn>=0.12.0
