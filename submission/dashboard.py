@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,9 +7,13 @@ import seaborn as sns
 # Load data
 @st.cache
 def load_data():
-    data = pd.read_csv("data/day.csv")
-    return data
-
+    file_path = os.path.join(os.path.dirname(__file__), 'data/day.csv')
+    
+    if not os.path.exists(file_path):
+        st.error(f"File tidak ditemukan: {file_path}")
+        return None
+    
+    return pd.read_csv(file_path)
 day_df = load_data()
 
 # Convert 'dteday' to datetime
