@@ -1,11 +1,5 @@
 streamlit
 pandas
 numpy
-matplotlib==3.10.0
-seaborn
-<<<<<<< HEAD
-=======
-    
->>>>>>> 7ef102aa9e0ecfb0645b0ef8a1c5d70a4dce1ae4
 matplotlib
 seaborn
