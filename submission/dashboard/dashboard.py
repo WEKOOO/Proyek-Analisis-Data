@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import streamlit as st
-import os
-os.system('pip install -r requirements.txt')
 
 # Load dataset
 @st.cache_data
