@@ -1,178 +1,119 @@
-import os
+# dashboard.py
 import streamlit as st
 import pandas as pd
-import seaborn as sns
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load data dengan error handling yang lebih robust
-@st.cache
+# Load dataset
+@st.cache_data
 def load_data():
-    try:
-        file_path = os.path.join(os.path.dirname(__file__), '../data/day.csv')
-        day_df = pd.read_csv(file_path)
-        
-        # Data preprocessing
-        day_df['dteday'] = pd.to_datetime(day_df['dteday'])
-        day_df['season'] = day_df['season'].map({
-            1: 'Springer', 
-            2: 'Summer', 
-            3: 'Fall', 
-            4: 'Winter'
-        })
-        day_df['weathersit'] = day_df['weathersit'].map({
-            1: 'Clear',
-            2: 'Mist',
-            3: 'Light Snow/Rain',
-            4: 'Heavy Rain/Snow'
-        })
-        day_df['workingday'] = day_df['workingday'].map({
-            0: 'Holiday/Weekend',
-            1: 'Working Day'
-        })
-        
-        return day_df
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return pd.DataFrame()
+    day_df = pd.read_csv('../data/day.csv')
+    hour_df = pd.read_csv('../data/hour.csv')
+    return day_df, hour_df
 
-day_df = load_data()
+day_df, hour_df = load_data()
 
-# Sidebar untuk kontrol analisis
-st.sidebar.header('Analisis Parameter')
-analysis_type = st.sidebar.radio(
-    "Pilih Jenis Analisis:",
-    ('Overview', 'Seasonal Analysis', 'User Behavior')
+# Data cleaning and preprocessing
+def preprocess_data(df):
+    # Convert 'dteday' to datetime
+    df['dteday'] = pd.to_datetime(df['dteday'])
+    
+    # Convert categorical columns to category type
+    categorical_cols = ['season', 'weathersit', 'holiday', 'workingday']
+    df[categorical_cols] = df[categorical_cols].astype('category')
+    return df
+
+day_df = preprocess_data(day_df)
+hour_df = preprocess_data(hour_df)
+
+# Streamlit App Title
+st.title("Dashboard Analisis Data Bike Sharing")
+
+# Sidebar for Navigation
+st.sidebar.title("Navigasi")
+option = st.sidebar.selectbox(
+    "Pilih Visualisasi",
+    ["Distribusi Penyewaan", "Pertanyaan 1: Musim dan Cuaca", "Pertanyaan 2: Casual vs Registered", "Heatmap Korelasi"]
 )
 
-# Main dashboard
-st.title('🛴 Analisis Penyewaan Sepeda Elektrik')
-st.markdown("""
-**Dataset:** Bike Sharing Dataset (2011-2012 Washington D.C.)
-""")
-
-# Bagian Overview
-if analysis_type == 'Overview':
-    st.header('📊 Tinjauan Umum Dataset')
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Total Hari Dicatat", len(day_df))
-        st.metric("Rata-rata Penyewaan Harian", f"{day_df['cnt'].mean():.0f}")
-    
-    with col2:
-        st.metric("Penyewaan Tertinggi", day_df['cnt'].max())
-        st.metric("Penyewaan Terendah", day_df['cnt'].min())
-
-    # Time series plot
-    fig = plt.figure(figsize=(12, 5))
-    sns.lineplot(x='dteday', y='cnt', data=day_df)
-    plt.title('Trend Penyewaan Sepeda Harian')
-    plt.xlabel('Tanggal')
-    plt.ylabel('Jumlah Penyewaan')
-    st.pyplot(fig)
-
-# Analisis Musiman
-elif analysis_type == 'Seasonal Analysis':
-    st.header('🍁 Analisis Musiman')
-    
-    # Heatmap musiman
-    season_pivot = day_df.pivot_table(
-        index='season',
-        columns='weathersit',
-        values='cnt',
-        aggfunc='mean'
-    )
-    
+# Distribusi Penyewaan
+if option == "Distribusi Penyewaan":
+    st.header("Distribusi Total Penyewaan Sepeda Harian")
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(season_pivot, annot=True, fmt=".0f", cmap='YlGnBu')
-    plt.title('Pengaruh Kombinasi Musim dan Cuaca\nPada Rata-rata Penyewaan')
-    plt.xlabel('Kondisi Cuaca')
-    plt.ylabel('Musim')
-    st.pyplot(fig)
-    
-    # Breakdown persentase
-    st.subheader('Distribusi Musiman')
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        fig = plt.figure()
-        day_df['season'].value_counts().plot.pie(autopct='%1.1f%%')
-        plt.title('Distribusi Data per Musim')
-        st.pyplot(fig)
-    
-    with col2:
-        fig = plt.figure()
-        sns.boxplot(x='season', y='cnt', data=day_df)
-        plt.title('Distribusi Penyewaan per Musim')
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-# Analisis Perilaku Pengguna
-elif analysis_type == 'User Behavior':
-    st.header('👥 Analisis Perilaku Pengguna')
-    
-    # Perbandingan pengguna
-    fig = plt.figure(figsize=(10, 6))
-    sns.scatterplot(
-        x='casual', 
-        y='registered', 
-        hue='workingday', 
-        data=day_df,
-        palette='viridis'
-    )
-    plt.title('Hubungan Antara Pengguna Casual dan Registered')
-    plt.xlabel('Pengguna Casual')
-    plt.ylabel('Pengguna Registered')
-    st.pyplot(fig)
-    
-   # Analisis temporal
-    st.subheader('Pola Temporal')
-    time_agg = st.selectbox(
-        'Agregasi Waktu:',
-        ('Bulanan', 'Mingguan')
-    )
-
-    if time_agg == 'Bulanan':
-        df_agg = day_df.resample('M', on='dteday')[['casual', 'registered']].mean()
-        title = 'Trend Bulanan'
-    else:
-        df_agg = day_df.resample('W', on='dteday')[['casual', 'registered']].mean()
-        title = 'Trend Mingguan'
-
-    fig = plt.figure(figsize=(12, 5))
-    plt.plot(df_agg.index, df_agg['casual'], label='Casual')
-    plt.plot(df_agg.index, df_agg['registered'], label='Registered')
-    plt.title(f'{title} Penyewaan Pengguna')
-    plt.xlabel('Tanggal')
-    plt.ylabel('Rata-rata Penyewaan')
-    plt.legend()
+    sns.histplot(day_df['cnt'], bins=30, kde=True, color='blue', ax=ax)
+    ax.set_title('Distribusi Total Penyewaan Sepeda Harian', fontsize=14)
+    ax.set_xlabel('Total Penyewaan', fontsize=12)
+    ax.set_ylabel('Frekuensi', fontsize=12)
+    ax.grid(True)
     st.pyplot(fig)
 
-# Bagian insight
-st.markdown("""
----
-### 🔍 Key Insights:
-1. **Pola Musiman**:
-   - Penyewaan tertinggi terjadi di musim panas (Summer) dengan cuaca cerah
-   - Cuaca buruk mengurangi penyewaan hingga 40-60%
-
-2. **Perilaku Pengguna**:
-   - Pengguna registered dominan di hari kerja (working days)
-   - Pengguna casual meningkat 2.5x di akhir pekan/hari libur
-
-3. **Pengaruh Lingkungan**:
-   - Suhu memiliki korelasi positif (+0.63) dengan jumlah penyewaan
-   - Kelembaban tinggi berkorelasi negatif dengan penyewaan
-""")
-
-# Menambahkan expander untuk metadata
-with st.expander("ℹ️ Tentang Dataset"):
     st.markdown("""
-    **Sumber Data:** Capital Bikeshare System (2011-2012)  
-    **Variabel Kunci:**
-    - `cnt`: Total penyewaan (casual + registered)
-    - `season`: Musim (1-4)
-    - `weathersit`: Kondisi cuaca (1-4)
-    - `temp`: Temperatur ternormalisasi
-    - `hum`: Kelembaban ternormalisasi
+    **Insight:**  
+    - Distribusi total penyewaan sepeda (cnt) cenderung normal dengan beberapa outlier.
+    - Rata-rata penyewaan harian adalah sekitar 4500 sepeda.
     """)
+
+# Pertanyaan 1: Musim dan Cuaca
+elif option == "Pertanyaan 1: Musim dan Cuaca":
+    st.header("Rata-Rata Penyewaan Sepeda Berdasarkan Musim dan Cuaca")
+    season_weather = day_df.groupby(['season', 'weathersit'])['cnt'].mean().reset_index()
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(x='season', y='cnt', hue='weathersit', data=season_weather, palette='coolwarm', ax=ax)
+    ax.set_title('Rata-Rata Penyewaan Sepeda Berdasarkan Musim dan Cuaca', fontsize=14)
+    ax.set_xlabel('Musim', fontsize=12)
+    ax.set_ylabel('Rata-Rata Penyewaan', fontsize=12)
+    ax.legend(title='Cuaca', title_fontsize=12, fontsize=10)
+    ax.grid(axis='y')
+    st.pyplot(fig)
+
+    st.markdown("""
+    **Insight:**  
+    - Penyewaan tertinggi terjadi pada musim panas (season 3) dengan cuaca cerah (weathersit 1).
+    - Cuaca buruk (weathersit 4) secara signifikan mengurangi jumlah penyewaan.
+    """)
+
+# Pertanyaan 2: Casual vs Registered
+elif option == "Pertanyaan 2: Casual vs Registered":
+    st.header("Perbandingan Rata-Rata Penyewaan: Casual vs Registered")
+    user_type = day_df.groupby(['workingday', 'holiday'])[['casual', 'registered']].mean().reset_index()
+    user_type_melted = user_type.melt(id_vars=['workingday', 'holiday'], value_vars=['casual', 'registered'],
+                                      var_name='User Type', value_name='Average Rentals')
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(x='workingday', y='Average Rentals', hue='User Type', data=user_type_melted, palette='Set2', ax=ax)
+    ax.set_title('Perbandingan Rata-Rata Penyewaan: Casual vs Registered', fontsize=14)
+    ax.set_xlabel('Hari Kerja (1) atau Hari Libur (0)', fontsize=12)
+    ax.set_ylabel('Rata-Rata Penyewaan', fontsize=12)
+    ax.legend(title='Tipe Pengguna', title_fontsize=12, fontsize=10)
+    ax.grid(axis='y')
+    st.pyplot(fig)
+
+    st.markdown("""
+    **Insight:**  
+    - Pengguna `registered` mendominasi penyewaan pada hari kerja.
+    - Pengguna `casual` lebih aktif pada hari libur.
+    """)
+
+# Heatmap Korelasi
+elif option == "Heatmap Korelasi":
+    st.header("Heatmap Korelasi Antar Variabel")
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(day_df.corr(), annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+    ax.set_title('Heatmap Korelasi Antar Variabel', fontsize=14)
+    st.pyplot(fig)
+
+    st.markdown("""
+    **Insight:**  
+    - Terdapat korelasi positif yang kuat antara suhu (`temp`) dan jumlah penyewaan (`cnt`).
+    - Kondisi cuaca buruk (`weathersit`) memiliki korelasi negatif dengan jumlah penyewaan.
+    """)
+
+# Footer
+st.sidebar.markdown("""
+---
+**Created by:** Weko Abbror  
+**Email:** wekoabbror@gmail.com  
+**ID Dicoding:** Weko Abbror
+""")
