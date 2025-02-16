@@ -34,8 +34,10 @@ def preprocess_data(df):
     df[categorical_cols] = df[categorical_cols].astype('category')
     return df
 
+day_df, hour_df = load_data()  # <-- Load data dulu
 day_df = preprocess_data(day_df)
 hour_df = preprocess_data(hour_df)
+
 
 # Streamlit App Title
 st.title("Dashboard Analisis Data Bike Sharing")
