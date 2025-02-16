@@ -4,15 +4,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import streamlit as st
+import os
 
 # Load dataset
 @st.cache_data
 def load_data():
-    day_df = pd.read_csv('data/day.csv')
-    hour_df = pd.read_csv('data/hour.csv')
-    return day_df, hour_df
+    # Dapatkan path absolut ke file saat runtime
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    day_path = os.path.join(base_path, 'data', 'day.csv')
+    hour_path = os.path.join(base_path, 'data', 'hour.csv')
 
-day_df, hour_df = load_data()
+    # Cek apakah file ada
+    if not os.path.exists(day_path):
+        st.error(f"File tidak ditemukan: {day_path}")
+    if not os.path.exists(hour_path):
+        st.error(f"File tidak ditemukan: {hour_path}")
+
+    day_df = pd.read_csv(day_path)
+    hour_df = pd.read_csv(hour_path)
+    return day_df, hour_df
 
 # Data cleaning and preprocessing
 def preprocess_data(df):
