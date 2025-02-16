@@ -6,7 +6,7 @@ import seaborn as sns
 import streamlit as st
 
 # Load dataset
-@st.cache_data
+@st.cache
 def load_data():
     day_df = pd.read_csv('data/day.csv')
     hour_df = pd.read_csv('data/hour.csv')
